@@ -56,7 +56,6 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
     def getPipeline = {
       val pipeline = Channels.pipeline()
       pipeline.addLast("decoder", new HttpResponseDecoder)
-
       pipeline.addLast("encoder", new HttpRequestEncoder)
       pipeline.addLast("ws-handler", new SimpleWebSocketClientHandler(client, handshaker))
       pipeline

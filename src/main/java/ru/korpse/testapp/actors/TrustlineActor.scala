@@ -1,25 +1,29 @@
 package ru.korpse.testapp.actors
 
 import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.actorRef2Scala
 import ru.korpse.testapp.messages.Messages
-import spray.json._
-import spray.json.DefaultJsonProtocol._
 import ru.korpse.testapp.messages.ReplyMessages.DoSendMessage
 import ru.korpse.testapp.messages.ReplyMessages.DoShutdown
-import ru.korpse.testapp.messages.ReplyMessages.DoDisconnect
 import ru.korpse.testapp.util.ReceiveLogger
-import akka.actor.ActorLogging
+import spray.json.JsArray
+import spray.json.JsValue
+import spray.json.pimpAny
+import ru.korpse.testapp.json.TrustlineRequest
+import ru.korpse.testapp.json.Trustline
+import spray.json.DefaultJsonProtocol
 
 class TrustlineActor(account: String) extends Actor with ActorLogging with ReceiveLogger {
+  private def getTrustlinesMsg(account: String, marker: String = null) = {
+    import ru.korpse.testapp.json.TrustlineRequestProtocol._
+    val req = TrustlineRequest(account = account, marker = marker).toJson.compactPrint
+    sender ! DoSendMessage(req)
+  }
   def receive: Receive = logMessage orElse {
     case Messages.Connected => {
       log.info("Connection has been established")
-      object TrustlineRequestJsonProtocol extends DefaultJsonProtocol {
-        implicit val trustlineRequestFormat = jsonFormat4(TrustlineRequest)
-      }
-      import TrustlineRequestJsonProtocol._
-      val req = TrustlineRequest(account).toJson.compactPrint
-      sender ! DoSendMessage(req)
+      getTrustlinesMsg(account)
     }
     case Messages.Disconnected => {
       log.info("The websocket disconnected.")
@@ -28,17 +32,22 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
     case Messages.JsonMessage(obj) => {
       try {
         val lines = obj.asJsObject.fields("result").asJsObject.fields("lines");
+        import ru.korpse.testapp.json.TrustlineProtocol._
         lines match {
           case JsArray(list: Vector[JsValue]) =>
-            list.foreach (trustline => {
-              trustline.asJsObject.fields.foreach {
-                case (fld: String, value: JsNumber) => println(fld + " -> " + value.convertTo[Int])
-                case (fld: String, value: JsBoolean) => println(fld + " -> " + value.convertTo[Boolean])
-                case (fld: String, value: Any) => println(fld + " -> " + value.convertTo[String])
-              }
+            list.foreach (trustlineJs => {
+              val trustline = trustlineJs.convertTo[Trustline]
               println("==========\n")
+              println("CUR: " + trustline.currency)
+              println("VAL: " + trustline.balance)
             })
           case _ => throw new RuntimeException("bad results")
+        }
+        if (obj.asJsObject.fields("result").asJsObject.fields.contains("marker")) {
+          import DefaultJsonProtocol._
+          val marker = obj.asJsObject.fields("result").asJsObject.fields("marker").convertTo[String];
+          val account = obj.asJsObject.fields("result").asJsObject.fields("account").convertTo[String];
+          getTrustlinesMsg(account, marker)
         }
       } catch {
         case e: Exception => e.printStackTrace() 
@@ -49,8 +58,5 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
     }
     case _ =>
   }
-  
-  case class TrustlineRequest(account: String, id: String = "1", command: String = "account_lines", ledger: String = "current")
-
 }
   
