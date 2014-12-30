@@ -41,7 +41,7 @@ import akka.actor.ActorLogging
 import ru.korpse.testapp.util.ReceiveLogger
 import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame
 
-class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Actor with ActorLogging with ReceiveLogger {
+class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) extends Actor with ActorLogging with ReceiveLogger {
   var channel: Channel = _
   val bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(Executors.newCachedThreadPool, Executors.newCachedThreadPool))
   val normalized = url.normalize()
@@ -73,10 +73,10 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
           synchronized { channel = future.getChannel }
           handshaker.handshake(channel)
         } else {
-          clientActor ! Option(future.getCause)
+          clientActors.foreach { actor => actor ! Option(future.getCause) }
         }
       }
-      clientActor ! Connecting
+      clientActors.foreach { actor => actor ! Connecting }
       val fut = bootstrap.connect(new InetSocketAddress(url.getHost, url.getPort))
       fut.addListener(listener)
       fut.await(5000L)
@@ -85,7 +85,7 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
 
   def disconnect = {
     if (channel != null && channel.isConnected) {
-      clientActor ! Disconnecting
+      clientActors.foreach { actor => actor ! Disconnecting }
       channel.write(new CloseWebSocketFrame())
     }
   }
@@ -93,7 +93,7 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
   def send(message: String) = {
     channel.write(new TextWebSocketFrame(ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8))).addListener(futureListener { fut =>
       if (!fut.isSuccess) {
-        clientActor ! WriteFailed(message, Option(fut.getCause))
+          clientActors.foreach { actor => actor ! Option(fut.getCause) }
       }
     })
   }
@@ -114,7 +114,7 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
 
     import Messages._
     override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
-      clientActor ! Disconnected
+      clientActors.foreach { actor => actor ! Disconnected }
     }
 
     override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
@@ -124,9 +124,9 @@ class SimpleWebSocketClientActor(val url: URI, clientActor: ActorRef) extends Ac
             + resp.getContent.toString(CharsetUtil.UTF_8) + ")")
         case resp: HttpResponse =>
           handshaker.finishHandshake(ctx.getChannel, e.getMessage.asInstanceOf[HttpResponse])
-          clientActor ! Messages.Connected
+      clientActors.foreach { actor => actor ! Connected }
 
-        case f: TextWebSocketFrame => clientActor ! JsonMessage(f.getText.parseJson)
+        case f: TextWebSocketFrame => clientActors.foreach { actor => actor ! JsonMessage(f.getText.parseJson) }
         case _: PongWebSocketFrame =>
         case _: PingWebSocketFrame =>
         case _: CloseWebSocketFrame => {

@@ -31,30 +31,30 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
     }
     case Messages.JsonMessage(obj) => {
       try {
-        val lines = obj.asJsObject.fields("result").asJsObject.fields("lines");
-        import ru.korpse.testapp.json.TrustlineProtocol._
-        lines match {
-          case JsArray(list: Vector[JsValue]) =>
-            list.foreach (trustlineJs => {
-              val trustline = trustlineJs.convertTo[Trustline]
-              println("==========\n")
-              println("CUR: " + trustline.currency)
-              println("VAL: " + trustline.balance)
-            })
-          case _ => throw new RuntimeException("bad results")
-        }
-        if (obj.asJsObject.fields("result").asJsObject.fields.contains("marker")) {
-          import DefaultJsonProtocol._
-          val marker = obj.asJsObject.fields("result").asJsObject.fields("marker").convertTo[String];
-          val account = obj.asJsObject.fields("result").asJsObject.fields("account").convertTo[String];
-          getTrustlinesMsg(account, marker)
+        if (obj.asJsObject.fields.contains("result")
+            && obj.asJsObject.fields("result").asJsObject.fields.contains("lines")) {
+          val lines = obj.asJsObject.fields("result").asJsObject.fields("lines");
+          import ru.korpse.testapp.json.TrustlineProtocol._
+          lines match {
+            case JsArray(list: Vector[JsValue]) =>
+              list.foreach (trustlineJs => {
+                val trustline = trustlineJs.convertTo[Trustline]
+                println("==Account line==\n")
+                println("CUR: " + trustline.currency)
+                println("VAL: " + trustline.balance)
+              })
+            case _ => throw new RuntimeException("bad results")
+          }
+          if (obj.asJsObject.fields("result").asJsObject.fields.contains("marker")) {
+            import DefaultJsonProtocol._
+            val marker = obj.asJsObject.fields("result").asJsObject.fields("marker").convertTo[String];
+            val account = obj.asJsObject.fields("result").asJsObject.fields("account").convertTo[String];
+            getTrustlinesMsg(account, marker)
+          }
         }
       } catch {
         case e: Exception => e.printStackTrace() 
       }
-      
-      //client send ("ECHO: " + message)
-      //sender ! DoDisconnect
     }
     case _ =>
   }
