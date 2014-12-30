@@ -39,10 +39,10 @@ class AccountTxActor(account: String) extends Actor with ActorLogging with Recei
                     .fields("TransactionType").convertTo[String] == "TrustSet") {
                   val limitAmount = transactionJs.asJsObject.fields("tx").asJsObject
                     .fields("LimitAmount").convertTo[LimitAmount]
-                  println("===Limit amount===")
-                  println("CUR: " + limitAmount.currency)
-                  println("ISR: " + limitAmount.issuer)
-                  println("VAL: " + limitAmount.value)
+                  log.info("\n===Limit amount===\n" +
+                      "CUR: " + limitAmount.currency + "\n" +
+                      "ISR: " + limitAmount.issuer + "\n" +
+                      "VAL: " + limitAmount.value)
                 }
               })
             case _ => throw new RuntimeException("bad results")
