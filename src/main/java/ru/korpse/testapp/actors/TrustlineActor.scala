@@ -39,7 +39,7 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
             case JsArray(list: Vector[JsValue]) =>
               list.foreach (trustlineJs => {
                 val trustline = trustlineJs.convertTo[Trustline]
-                println("==Account line==\n")
+                println("==Account line==")
                 println("CUR: " + trustline.currency)
                 println("VAL: " + trustline.balance)
               })

@@ -1,7 +1,12 @@
 package ru.korpse.testapp.json
 
 case class AccountTxRequest(
-    accounts: Array[String],
-    id: String = "1",
-    command: String = "subscribe",
-    streams: Array[String] = Array("transactions"))
+  account: String,
+  id: String = "1",
+  command: String = "account_tx",
+  ledgerIndexMin: Int = -1,
+  ledgerIndexMax: Int = -1,
+  binary: Boolean = false,
+  count: Boolean = false,
+  forward: Boolean = false,
+  marker: String = null)

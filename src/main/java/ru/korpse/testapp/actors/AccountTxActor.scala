@@ -4,21 +4,17 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
 import ru.korpse.testapp.json.LimitAmount
-import ru.korpse.testapp.json.LimitAmountProtocol.StringJsonFormat
-import ru.korpse.testapp.json.AccountTxRequest
 import ru.korpse.testapp.messages.Messages
 import ru.korpse.testapp.messages.ReplyMessages.DoSendMessage
 import ru.korpse.testapp.messages.ReplyMessages.DoShutdown
 import ru.korpse.testapp.util.ReceiveLogger
-import spray.json.JsArray
-import spray.json.JsValue
-import spray.json.pimpAny
+import spray.json.{DefaultJsonProtocol, JsArray, JsValue, pimpAny}
 import ru.korpse.testapp.json.AccountTxRequest
 
 class AccountTxActor(account: String) extends Actor with ActorLogging with ReceiveLogger {
-  private def getSubscriptionMsg(account: String) = {
+  private def getSubscriptionMsg(account: String, marker: String = null) = {
     import ru.korpse.testapp.json.AccountTxRequestProtocol._
-    val req = AccountTxRequest(Array(account)).toJson.compactPrint
+    val req = AccountTxRequest(account = account, marker = marker).toJson.compactPrint
     sender ! DoSendMessage(req)
   }
   def receive: Receive = logMessage orElse {
@@ -34,7 +30,7 @@ class AccountTxActor(account: String) extends Actor with ActorLogging with Recei
       try {
         if (obj.asJsObject.fields.contains("result")
             && obj.asJsObject.fields("result").asJsObject.fields.contains("transactions")) {
-          val transactions = obj.asJsObject.fields("result").asJsObject.fields("transactions");
+          val transactions = obj.asJsObject.fields("result").asJsObject.fields("transactions")
           import ru.korpse.testapp.json.LimitAmountProtocol._
           transactions match {
             case JsArray(list: Vector[JsValue]) =>
@@ -43,7 +39,7 @@ class AccountTxActor(account: String) extends Actor with ActorLogging with Recei
                     .fields("TransactionType").convertTo[String] == "TrustSet") {
                   val limitAmount = transactionJs.asJsObject.fields("tx").asJsObject
                     .fields("LimitAmount").convertTo[LimitAmount]
-                  println("===Limit amount===\n")
+                  println("===Limit amount===")
                   println("CUR: " + limitAmount.currency)
                   println("ISR: " + limitAmount.issuer)
                   println("VAL: " + limitAmount.value)
@@ -51,6 +47,13 @@ class AccountTxActor(account: String) extends Actor with ActorLogging with Recei
               })
             case _ => throw new RuntimeException("bad results")
           }
+          if (obj.asJsObject.fields("result").asJsObject.fields.contains("marker")) {
+            import DefaultJsonProtocol._
+            val marker = obj.asJsObject.fields("result").asJsObject.fields("marker").convertTo[String]
+            val account = obj.asJsObject.fields("result").asJsObject.fields("account").convertTo[String]
+            getSubscriptionMsg(account, marker)
+          }
+
         }
       } catch {
         case e: Exception => e.printStackTrace() 

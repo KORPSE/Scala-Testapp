@@ -19,7 +19,7 @@ object Main extends App {
   val subscriptionActor = system.actorOf(Props(new AccountTxActor("rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q")), name = "SubscriptionActor")
   
   var client = system.actorOf(
-      Props(new SimpleWebSocketClientActor(new URI("ws://s1.ripple.com:443"), Array(subscriptionActor))), "ClientActor");
+      Props(new SimpleWebSocketClientActor(new URI("ws://s1.ripple.com:443"), Array(trustlineActor, subscriptionActor))), "ClientActor");
 
   client ! DoConnect
 }
