@@ -9,4 +9,4 @@ case class AccountTxRequest(
   binary: Boolean = false,
   count: Boolean = false,
   forward: Boolean = false,
-  marker: String = null)
+  marker: Option[String])

@@ -14,7 +14,7 @@ import ru.korpse.testapp.json.AccountTxRequest
 class AccountTxActor(account: String) extends Actor with ActorLogging with ReceiveLogger {
   private def getSubscriptionMsg(account: String, marker: String = null) = {
     import ru.korpse.testapp.json.AccountTxRequestProtocol._
-    val req = AccountTxRequest(account = account, marker = marker).toJson.compactPrint
+    val req = AccountTxRequest(account = account, marker = Option(marker)).toJson.compactPrint
     sender ! DoSendMessage(req)
   }
   def receive: Receive = logMessage orElse {

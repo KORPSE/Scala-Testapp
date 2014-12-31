@@ -5,4 +5,4 @@ case class TrustlineRequest(
   id: String = "1",
   command: String = "account_lines",
   ledger: String = "current",
-  marker: String = null)
+  marker: Option[String])

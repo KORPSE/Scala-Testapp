@@ -17,7 +17,7 @@ import spray.json.DefaultJsonProtocol
 class TrustlineActor(account: String) extends Actor with ActorLogging with ReceiveLogger {
   private def getTrustlinesMsg(account: String, marker: String = null) = {
     import ru.korpse.testapp.json.TrustlineRequestProtocol._
-    val req = TrustlineRequest(account = account, marker = marker).toJson.compactPrint
+    val req = TrustlineRequest(account = account, marker = Option(marker)).toJson.compactPrint
     sender ! DoSendMessage(req)
   }
   def receive: Receive = logMessage orElse {
