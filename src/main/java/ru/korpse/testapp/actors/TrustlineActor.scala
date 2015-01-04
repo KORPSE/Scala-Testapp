@@ -3,20 +3,19 @@ package ru.korpse.testapp.actors
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.actorRef2Scala
+import ru.korpse.testapp.json.protocol.{TrustlineRequestProtocol, TrustlineProtocol}
 import ru.korpse.testapp.messages.Messages
 import ru.korpse.testapp.messages.ReplyMessages.DoSendMessage
 import ru.korpse.testapp.messages.ReplyMessages.DoShutdown
 import ru.korpse.testapp.util.ReceiveLogger
-import spray.json.JsArray
-import spray.json.JsValue
 import spray.json.pimpAny
-import ru.korpse.testapp.json.TrustlineRequest
-import ru.korpse.testapp.json.Trustline
+import ru.korpse.testapp.json.{AccountLines, TrustlineRequest, Trustline}
 import spray.json.DefaultJsonProtocol
+import TrustlineProtocol._
+import TrustlineRequestProtocol._
 
-class TrustlineActor(account: String) extends Actor with ActorLogging with ReceiveLogger {
+class TrustlineActor(account: String) extends Actor with ActorLogging with ReceiveLogger with DefaultJsonProtocol {
   private def getTrustlinesMsg(account: String, marker: String = null) = {
-    import ru.korpse.testapp.json.TrustlineRequestProtocol._
     val req = TrustlineRequest(account = account, marker = Option(marker)).toJson.compactPrint
     sender ! DoSendMessage(req)
   }
@@ -30,30 +29,19 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
       sender ! DoShutdown
     }
     case Messages.JsonMessage(obj) => {
-      try {
-        if (obj.asJsObject.fields.contains("result")
-            && obj.asJsObject.fields("result").asJsObject.fields.contains("lines")) {
-          val lines = obj.asJsObject.fields("result").asJsObject.fields("lines");
-          import ru.korpse.testapp.json.TrustlineProtocol._
-          lines match {
-            case JsArray(list: Vector[JsValue]) =>
-              list.foreach (trustlineJs => {
-                val trustline = trustlineJs.convertTo[Trustline]
-                log.info("==Account line==\n" +
-                    "CUR: " + trustline.currency + "\n" +
-                    "VAL: " + trustline.balance)
-              })
-            case _ => throw new RuntimeException("bad results")
-          }
-          if (obj.asJsObject.fields("result").asJsObject.fields.contains("marker")) {
-            import DefaultJsonProtocol._
-            val marker = obj.asJsObject.fields("result").asJsObject.fields("marker").convertTo[String];
-            val account = obj.asJsObject.fields("result").asJsObject.fields("account").convertTo[String];
-            getTrustlinesMsg(account, marker)
-          }
+      if (obj.asJsObject.fields.contains("result")
+          && obj.asJsObject.fields("result").asJsObject.fields.contains("lines")) {
+        val accountLines = obj.convertTo[AccountLines];
+        accountLines.result.lines.foreach (trustline => {
+          log.info("==Account line==\n" +
+              "CUR: " + trustline.currency + "\n" +
+              "VAL: " + trustline.balance)
+        })
+        if (accountLines.result.marker.isDefined) {
+          val marker = accountLines.result.marker.get;
+          val account = accountLines.result.account;
+          getTrustlinesMsg(account, marker)
         }
-      } catch {
-        case e: Exception => e.printStackTrace() 
       }
     }
     case _ =>

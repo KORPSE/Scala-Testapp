@@ -1,6 +1,6 @@
-package ru.korpse.testapp.json
+package ru.korpse.testapp.json.protocol
 
-import ru.korpse.testapp.json.TrustlineRequestProtocol._
+import ru.korpse.testapp.json.AccountTxRequest
 import spray.json._
 
 object AccountTxRequestProtocol extends DefaultJsonProtocol {
