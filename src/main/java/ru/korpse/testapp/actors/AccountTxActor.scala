@@ -29,19 +29,18 @@ class AccountTxActor(account: String) extends Actor with ActorLogging with Recei
             && obj.asJsObject.fields("result").asJsObject.fields.contains("transactions")) {
           val accountTx = obj.convertTo[AccountTx]
           accountTx.result.transactions.foreach (transaction => {
-            if (transaction.tx.transactionType.isDefined && transaction.tx.transactionType.get == "TrustSet") {
-              val limitAmount = transaction.tx.limitAmount
-              log.info("\n===Limit amount===\n" +
+            transaction.tx.transactionType match {
+              case Some("TrustSet") => {
+                val limitAmount = transaction.tx.limitAmount
+                log.info("\n===Limit amount===\n" +
                   "CUR: " + limitAmount.get.currency + "\n" +
                   "ISR: " + limitAmount.get.issuer + "\n" +
                   "VAL: " + limitAmount.get.value)
+              }
+              case _ =>
             }
           })
-          if (accountTx.result.marker.isDefined) {
-            val marker = accountTx.result.marker.get
-            val account = accountTx.result.account
-            getSubscriptionMsg(account, Option(marker))
-          }
+          accountTx.result.marker.map(marker => getSubscriptionMsg(account, Option(marker)))
         }
       } catch {
         case e: Exception => e.printStackTrace()

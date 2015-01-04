@@ -37,11 +37,7 @@ class TrustlineActor(account: String) extends Actor with ActorLogging with Recei
               "CUR: " + trustline.currency + "\n" +
               "VAL: " + trustline.balance)
         })
-        if (accountLines.result.marker.isDefined) {
-          val marker = accountLines.result.marker.get;
-          val account = accountLines.result.account;
-          getTrustlinesMsg(account, marker)
-        }
+        accountLines.result.marker.map(marker => getTrustlinesMsg(account, marker))
       }
     }
     case _ =>
