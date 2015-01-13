@@ -1,11 +1,7 @@
 package ru.korpse.testapp.json.protocol
 
-import ru.korpse.testapp.json.AccountTxTransaction
+import ru.korpse.testapp.json.{AccountTx, AccountTxResult, AccountTxTransaction, AccountTxTransactionTx, LimitAmount}
 import spray.json.DefaultJsonProtocol
-import ru.korpse.testapp.json.AccountTxResult
-import ru.korpse.testapp.json.AccountTx
-import ru.korpse.testapp.json.AccountTxTransactionTx
-import ru.korpse.testapp.json.LimitAmount
 
 object AccountTxProtocol extends DefaultJsonProtocol {
   implicit val limitAmountFormat = jsonFormat3(LimitAmount)

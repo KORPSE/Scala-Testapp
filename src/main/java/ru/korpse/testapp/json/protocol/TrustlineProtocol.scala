@@ -1,6 +1,6 @@
 package ru.korpse.testapp.json.protocol
 
-import ru.korpse.testapp.json.{AccountLinesResult, AccountLines, Trustline}
+import ru.korpse.testapp.json.{AccountLines, AccountLinesResult, Trustline}
 import spray.json.DefaultJsonProtocol
 
 object TrustlineProtocol extends DefaultJsonProtocol {
