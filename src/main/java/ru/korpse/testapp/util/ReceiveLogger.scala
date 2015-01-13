@@ -8,7 +8,7 @@ trait ReceiveLogger {
 
   def logMessage: Receive = new Receive {
     def isDefinedAt(x: Any) = {
-      log.info(s"Got a $x")
+      log.debug(s"Got a $x")
       false
     }
     def apply(x: Any) = throw new UnsupportedOperationException

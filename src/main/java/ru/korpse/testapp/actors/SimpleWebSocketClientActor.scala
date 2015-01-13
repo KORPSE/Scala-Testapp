@@ -42,15 +42,14 @@ import ru.korpse.testapp.util.ReceiveLogger
 import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame
 
 class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) extends Actor with ActorLogging with ReceiveLogger {
-  var channel: Channel = _
   val bootstrap = new ClientBootstrap(new NioClientSocketChannelFactory(Executors.newCachedThreadPool, Executors.newCachedThreadPool))
   val normalized = url.normalize()
   val tgt = if (normalized.getPath == null || normalized.getPath.trim().isEmpty) {
     new URI(normalized.getScheme, normalized.getAuthority, "/", normalized.getQuery, normalized.getFragment)
   } else normalized
   val handshaker = new WebSocketClientHandshakerFactory().newHandshaker(tgt, WebSocketVersion.V13, null, false, Map.empty[String, String])
-
   val client = this;
+  var channel: Channel = _
 
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     def getPipeline = {
@@ -62,21 +61,26 @@ class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) ex
     }
   })
 
-  def futureListener(handleWith: ChannelFuture => Unit) = new ChannelFutureListener {
-    def operationComplete(future: ChannelFuture) { handleWith(future) }
+  def receive: Receive = logMessage orElse {
+    case DoConnect => connect
+    case DoDisconnect => disconnect
+    case DoSendMessage(msg) => send(msg)
+    case DoShutdown => shutdown
   }
 
   def connect = {
     if (channel == null || !channel.isConnected) {
       val listener = futureListener { future =>
         if (future.isSuccess) {
-          synchronized { channel = future.getChannel }
+          synchronized {
+            channel = future.getChannel
+          }
           handshaker.handshake(channel)
         } else {
-          clientActors.foreach { actor => actor ! Option(future.getCause) }
+          clientActors.foreach { actor => actor ! Option(future.getCause)}
         }
       }
-      clientActors.foreach { actor => actor ! Connecting }
+      clientActors.foreach { actor => actor ! Connecting}
       val fut = bootstrap.connect(new InetSocketAddress(url.getHost, url.getPort))
       fut.addListener(listener)
       fut.await(5000L)
@@ -85,7 +89,7 @@ class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) ex
 
   def disconnect = {
     if (channel != null && channel.isConnected) {
-      clientActors.foreach { actor => actor ! Disconnecting }
+      clientActors.foreach { actor => actor ! Disconnecting}
       channel.write(new CloseWebSocketFrame())
     }
   }
@@ -93,28 +97,28 @@ class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) ex
   def send(message: String) = {
     channel.write(new TextWebSocketFrame(ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8))).addListener(futureListener { fut =>
       if (!fut.isSuccess) {
-          clientActors.foreach { actor => actor ! Option(fut.getCause) }
+        clientActors.foreach { actor => actor ! Option(fut.getCause)}
       }
     })
+  }
+
+  def futureListener(handleWith: ChannelFuture => Unit) = new ChannelFutureListener {
+    def operationComplete(future: ChannelFuture) {
+      handleWith(future)
+    }
   }
 
   def shutdown = {
     bootstrap.shutdown()
     System.exit(0)
   }
-  
-  def receive: Receive = logMessage orElse {
-    case DoConnect => connect
-    case DoDisconnect => disconnect
-    case DoSendMessage(msg) => send(msg)
-    case DoShutdown => shutdown
-  }
 
   class SimpleWebSocketClientHandler(client: SimpleWebSocketClientActor, handshaker: WebSocketClientHandshaker) extends SimpleChannelUpstreamHandler {
 
     import Messages._
+
     override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
-      clientActors.foreach { actor => actor ! Disconnected }
+      clientActors.foreach { actor => actor ! Disconnected}
     }
 
     override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
@@ -124,9 +128,8 @@ class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) ex
             + resp.getContent.toString(CharsetUtil.UTF_8) + ")")
         case resp: HttpResponse =>
           handshaker.finishHandshake(ctx.getChannel, e.getMessage.asInstanceOf[HttpResponse])
-      clientActors.foreach { actor => actor ! Connected }
-
-        case f: TextWebSocketFrame => clientActors.foreach { actor => actor ! JsonMessage(f.getText.parseJson) }
+          clientActors.foreach { actor => actor ! Connected}
+        case f: TextWebSocketFrame => clientActors.foreach { actor => actor ! JsonMessage(f.getText.parseJson)}
         case _: PongWebSocketFrame =>
         case _: PingWebSocketFrame =>
         case _: CloseWebSocketFrame => {
@@ -135,4 +138,5 @@ class SimpleWebSocketClientActor(val url: URI, clientActors: Array[ActorRef]) ex
       }
     }
   }
+
 }

@@ -1,25 +1,31 @@
 package ru.korpse.testapp
 
+import java.io.InputStream
 import java.net.URI
-import org.slf4j.LoggerFactory
+import java.util.Properties
 import akka.actor.ActorSystem
 import akka.actor.Props
-import ch.qos.logback.core.util.StatusPrinter
-import ru.korpse.testapp.actors.SimpleWebSocketClientActor
-import ru.korpse.testapp.actors.TrustlineActor
+import org.slf4j.LoggerFactory
+import ru.korpse.testapp.actors.{TrustlineActorComponent, SimpleWebSocketClientActor}
 import ru.korpse.testapp.messages.ReplyMessages._
-import ch.qos.logback.classic.LoggerContext
-import akka.event.Logging
-import ru.korpse.testapp.actors.AccountTxActor
+import ru.korpse.testapp.reporter.{ReporterImpl, ReporterComponent}
+import ru.korpse.testapp.util.PropertiesAwared
 
-object Main extends App {
+object Main extends App with TrustlineActorComponent with ReporterComponent with PropertiesAwared {
 
   val system = ActorSystem("ClientActor")
-  val trustlineActor = system.actorOf(Props(new TrustlineActor("rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q")), name = "TrustlineActor")
-  val accountTxActor = system.actorOf(Props(new AccountTxActor("rMwjYedjc7qqtKYVLiAccJSmCwih4LnE2q")), name = "SubscriptionActor")
-  
+
+  val reporter = new ReporterImpl
+  val trustlineActorRef = system.actorOf(Props(new TrustlineActor), name = "TrustlineActor")
+
+  val props: Properties = new Properties
+  val in: InputStream = getClass().getResourceAsStream("/settings.properties")
+  props.load(in)
+  in.close()
+
   var client = system.actorOf(
-      Props(new SimpleWebSocketClientActor(new URI("ws://s1.ripple.com:443"), Array(trustlineActor, accountTxActor))), "ClientActor");
+      Props(new SimpleWebSocketClientActor(new URI("ws://s1.ripple.com:443"), Array(trustlineActorRef))),
+        "ClientActor");
 
   client ! DoConnect
 }
