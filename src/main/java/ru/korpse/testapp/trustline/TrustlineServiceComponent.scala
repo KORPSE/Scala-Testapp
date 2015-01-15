@@ -7,7 +7,7 @@ import akka.event.Logging
 import com.typesafe.config.ConfigFactory
 import ru.korpse.testapp.json.protocol.TrustlineProtocol._
 import ru.korpse.testapp.json.protocol.TrustlineRequestProtocol._
-import ru.korpse.testapp.json.{AccountLines, Trustline, TrustlineRequest}
+import ru.korpse.testapp.json.{AccountLines, TrustlineRequest}
 import ru.korpse.testapp.reporter.ReporterComponent
 import ru.korpse.testapp.websocketclient.SimpleWebSocketClientComponent
 import spray.json.{DefaultJsonProtocol, JsValue, pimpAny}
@@ -17,7 +17,7 @@ import scala.concurrent.duration.Duration
 
 trait TrustlineServiceComponent {
   this: SimpleWebSocketClientComponent with ReporterComponent =>
-  def trustlineService: TrustlineService
+  val trustlineService: TrustlineService
 
   class TrustlineServiceImpl extends TrustlineService with DefaultJsonProtocol {
     val log = Logging(TypedActor.context.system, TypedActor.context.self)
@@ -36,7 +36,7 @@ trait TrustlineServiceComponent {
     def connected = {
       log.debug("Connection has been established")
       val system = TypedActor.context.system
-      system.scheduler.schedule(Duration.Zero, Duration.create(10, TimeUnit.SECONDS), new Runnable() {
+      system.scheduler.schedule(Duration.Zero, Duration.create(4, TimeUnit.SECONDS), new Runnable() {
         override def run(): Unit = {
             client.send(TrustlineRequest(account = account, marker = None).toJson.compactPrint)
         }

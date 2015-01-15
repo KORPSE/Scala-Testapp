@@ -18,7 +18,7 @@ object Main extends App with TrustlineServiceComponent with ReporterComponent
       "TrustlineActor")
 
   val client: SimpleWebSocketClient = TypedActor(system).typedActorOf(
-      TypedProps(classOf[SimpleWebSocketClient], new SimpleWebSocketClientImpl(new URI("ws://s1.ripple.com:443"))),
+      TypedProps(classOf[SimpleWebSocketClient], new SimpleWebSocketClientProxy(new URI("ws://s1.ripple.com:443"))),
         "ClientActor")
 
   client.connect
