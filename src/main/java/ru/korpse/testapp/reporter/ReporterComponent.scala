@@ -9,9 +9,9 @@ trait ReporterComponent {
   class ReporterImpl extends Reporter {
     val log = LoggerFactory.getLogger("testapp." + getClass.getName)
     def report(trustline: Trustline) = {
-      log.info("==Account line==\n" +
-        "CUR: " + trustline.currency + "\n" +
-        "VAL: " + trustline.balance)
+      log.info("Account line:" +
+        " CUR: " + trustline.currency +
+        " VAL: " + trustline.balance)
     }
   }
 }

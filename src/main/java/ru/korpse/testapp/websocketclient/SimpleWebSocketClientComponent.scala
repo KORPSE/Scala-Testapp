@@ -54,7 +54,7 @@ trait SimpleWebSocketClientComponent {
             }
             handshaker.handshake(channel)
           } else {
-            //clientActors.foreach { actor => actor ! Option(future.getCause)}
+            throw future.getCause
           }
         }
         trustlineService.connecting
@@ -76,7 +76,7 @@ trait SimpleWebSocketClientComponent {
       log.debug(s"Sending: '$message'")
       channel.write(new TextWebSocketFrame(ChannelBuffers.copiedBuffer(message, CharsetUtil.UTF_8))).addListener(futureListener { fut =>
         if (!fut.isSuccess) {
-          //clientActors.foreach { actor => actor ! Option(fut.getCause)}
+          throw fut.getCause
         }
       })
     }
