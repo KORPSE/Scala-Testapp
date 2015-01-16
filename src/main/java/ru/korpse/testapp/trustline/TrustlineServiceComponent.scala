@@ -13,7 +13,7 @@ import ru.korpse.testapp.websocketclient.SimpleWebSocketClientComponent
 import spray.json.{DefaultJsonProtocol, JsValue, pimpAny}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 trait TrustlineServiceComponent {
   this: SimpleWebSocketClientComponent with ReporterComponent =>
@@ -36,7 +36,7 @@ trait TrustlineServiceComponent {
     def connected = {
       log.debug("Connection has been established")
       val system = TypedActor.context.system
-      system.scheduler.schedule(Duration.Zero, Duration.create(10, TimeUnit.SECONDS), new Runnable() {
+      system.scheduler.schedule(Duration.Zero, 10 seconds, new Runnable() {
         override def run(): Unit = {
             client.send(TrustlineRequest(account = account, marker = None).toJson.compactPrint)
         }
