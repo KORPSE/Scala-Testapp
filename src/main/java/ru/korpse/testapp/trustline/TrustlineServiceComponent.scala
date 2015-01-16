@@ -36,7 +36,7 @@ trait TrustlineServiceComponent {
     def connected = {
       log.debug("Connection has been established")
       val system = TypedActor.context.system
-      system.scheduler.schedule(Duration.Zero, Duration.create(4, TimeUnit.SECONDS), new Runnable() {
+      system.scheduler.schedule(Duration.Zero, Duration.create(10, TimeUnit.SECONDS), new Runnable() {
         override def run(): Unit = {
             client.send(TrustlineRequest(account = account, marker = None).toJson.compactPrint)
         }

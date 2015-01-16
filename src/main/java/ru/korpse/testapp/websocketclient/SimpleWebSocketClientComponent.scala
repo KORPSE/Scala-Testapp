@@ -26,12 +26,12 @@ trait SimpleWebSocketClientComponent {
 
   val client: SimpleWebSocketClient
 
-  class SimpleWebSocketClientProxy(val url: URI) extends SimpleWebSocketClient {
+  class SimpleWebSocketClientImpl(val url: URI) extends SimpleWebSocketClient {
     val nioClientSocketChannelFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool, Executors.newCachedThreadPool)
     val system = TypedActor.context.system
     def createClient : SimpleWebSocketClient = {
       simpleClient = TypedActor(system).typedActorOf(
-        TypedProps(classOf[SimpleWebSocketClient], new SimpleWebSocketClientImpl(url, nioClientSocketChannelFactory)),
+        TypedProps(classOf[SimpleWebSocketClient], new DefaultSimpleWebSocketClient(url, nioClientSocketChannelFactory)),
         "ClientActorImpl" + Random.nextInt())
       simpleClient.connect
       simpleClient
@@ -46,7 +46,7 @@ trait SimpleWebSocketClientComponent {
     def send(msg: String) = simpleClient.send(msg)
 
 
-    class SimpleWebSocketClientImpl(val url: URI, val channelFactory: ChannelFactory) extends SimpleWebSocketClient {
+    class DefaultSimpleWebSocketClient(val url: URI, val channelFactory: ChannelFactory) extends SimpleWebSocketClient {
       val log = Logging(TypedActor.context.system, TypedActor.context.self)
       val normalized = url.normalize()
       val tgt = if (normalized.getPath == null || normalized.getPath.trim().isEmpty) {
@@ -115,7 +115,7 @@ trait SimpleWebSocketClientComponent {
         System.exit(0)
       }
 
-      class SimpleWebSocketClientHandler(client: SimpleWebSocketClientImpl, handshaker: WebSocketClientHandshaker) extends SimpleChannelUpstreamHandler {
+      class SimpleWebSocketClientHandler(client: DefaultSimpleWebSocketClient, handshaker: WebSocketClientHandshaker) extends SimpleChannelUpstreamHandler {
         override def channelClosed(ctx: ChannelHandlerContext, e: ChannelStateEvent) {
           trustlineService.disconnected
           system.scheduler.scheduleOnce(Duration.Zero,
